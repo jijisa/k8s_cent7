@@ -1,0 +1,10 @@
+---
+- name: Disable and stop firewalld
+  service: name=firewalld state=stopped enabled=no
+
+- name: Install ntp
+  yum: name=ntp state=latest
+
+- name: Enable and Start ntpd
+  service: name=ntpd state=restarted enabled=yes
+...

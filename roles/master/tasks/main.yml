@@ -1,0 +1,44 @@
+---
+- name: Install kubernetes master package
+  yum: name=kubernetes-{{ item }} state=latest
+  with_items:
+    - master
+    - client
+
+- name: Configure kubelet
+  template: src=apiserver.j2 dest=/etc/kubernetes/apiserver
+
+- name: Create systemd drop-in dir for kube-{scheduler,controller-manager}
+  file: path=/etc/systemd/system/kube-{{ item }}.service.d 
+          state=directory mode=0755
+  with_items:
+    - scheduler
+    - controller-manager
+
+- name: Copy drop-in unit for kube-scheduler
+  copy: src={{ drop_in }} 
+      dest=/etc/systemd/system/kube-scheduler.service.d/{{ drop_in }}
+
+- name: Copy drop-in unit for kube-controller-manager
+  copy: src={{ drop_in }} 
+      dest=/etc/systemd/system/kube-controller-manager.service.d/{{ drop_in }}
+
+- name: stop master three musketeers for copying binaries
+  service: name={{ item }} state=stopped
+  with_items: "{{ master_three_musketeers }}"
+  ignore_errors: yes
+
+- name: Copy kube-{apiserver,scheduler,controller-manager,kubectl} binaries
+  copy: src={{ item }} dest=/usr/bin/{{ item }} mode=0755
+  with_items: 
+    - "{{ master_three_musketeers }}"
+    - kubectl
+
+- name: Create /var/run/kubernetes with ownership of kube.
+  file: path=/var/run/kubernetes state=directory 
+          mode=0755 owner=kube group=kube
+
+- name: Enable and start master three musketeers
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: "{{ master_three_musketeers }}"
+...

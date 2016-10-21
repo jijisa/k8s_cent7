@@ -1,0 +1,64 @@
+---
+# installing docker from docker repo is more complicated 
+# to set up docker daemon so not using it. - Heechul
+#- name: Add docker yum repository
+#  yum_repository:
+#    name: docker
+#    description: Docker repository
+#    file: docker
+#    baseurl: https://yum.dockerproject.org/repo/main/centos/7/
+#    enabled: yes
+#    gpgcheck: yes
+#    gpgkey: https://yum.dockerproject.org/gpg
+#    
+#- name: Install docker container engine package
+#  yum: name=docker-engine state=latest
+
+- name: Install docker container engine package
+  yum: name={{ item }} state=latest
+  with_items:
+    - docker
+    - python-pip
+
+- name: Put /etc/sysconfig/docker file.
+  template: src=docker.j2 dest=/etc/sysconfig/docker 
+#  lineinfile: dest=/etc/sysconfig/docker regexp='^OPTIONS=' 
+#      line="OPTIONS='--selinux-enabled --log-driver=journald -G dockerroot'"
+
+- name: Enable and Start docker
+  service: name=docker state=restarted enabled=yes
+
+- name: Set up the operator user 'ucim' other than root
+  user: name=ucim comment="UCIM user" groups=wheel,dockerroot append=yes
+      password={{ ucim_password }}
+
+- name: Add aliases into ucim's .bashrc
+  blockinfile:
+    dest: /home/ucim/.bashrc
+    block: |
+      alias {{ item.name }}='{{ item.value }}'
+    marker: "# {mark} K8S MASTER ALIAS BLOCK {{ item.value }}"
+  with_items:
+      - { name: e, value: etcdctl }
+      - { name: uc, value: kubectl }
+      - { name: watch, value: 'watch ' }
+
+- name: Create a directory for registry volume.
+  file: path=/srv/docker/images state=directory mode=0755
+
+- name: Install docker-py module.
+  shell: /usr/bin/pip install docker-py
+
+- name: Run a private docker registry - D'Artagnan
+  docker_container:
+    name: dartagnan
+    state: started
+    image: registry:2
+    ports:
+      - "5000:5000"
+    volumes:
+      - /srv/docker/images:/var/lib/registry:rw
+
+#- name: Inline-Edit sudoers of wheel group.
+#  lineinfile: "dest=/etc/sudoers state=present regexp='^%wheel' line='%wheel ALL=(ALL) NOPASSWD: ALL'"
+...

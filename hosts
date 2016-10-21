@@ -1,0 +1,7 @@
+[master]
+localhost	ansible_connection=local
+
+[minion]
+cent-minion1      ansible_connection=ssh      ansible_user=root
+cent-minion2      ansible_connection=ssh      ansible_user=root
+cent-minion3      ansible_connection=ssh      ansible_user=root

@@ -1,0 +1,9 @@
+---
+# Play: run_role.yml
+# ansible-playbook -i <inv> run_role.yml -e "ROLE=<role>" -e "TARGET=<hostname>"
+
+- hosts: '{{ TARGET }}'
+  user: root
+
+  roles:
+  - { role: '{{ ROLE }}' }

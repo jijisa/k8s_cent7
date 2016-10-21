@@ -1,0 +1,15 @@
+---
+- name: Install kubernetes node package
+  yum: name=kubernetes-node state=latest
+- name: Configure kubelet
+  template: src={{ item }}.j2 dest=/etc/kubernetes/{{ item }}
+  with_items:
+    - kubelet
+    - config
+- name: Copy kube{let,-proxy} lastest binaries
+  copy: src={{ item }} dest=/usr/bin/{{ item }} mode=0755
+  with_items: "{{ minion_duo }}"
+- name: Enable and start minion dynamic duo
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: "{{ minion_duo }}"
+...

@@ -1,0 +1,8 @@
+---
+drop_in: 10-enforce_after_apiserver.conf
+cluster_ip_cidr: 10.100.0.0/16
+master_three_musketeers:
+  - kube-apiserver
+  - kube-scheduler
+  - kube-controller-manager
+...

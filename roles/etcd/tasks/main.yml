@@ -1,0 +1,9 @@
+---
+- name: Install etcd cluster KVS package
+  yum: name=etcd state=latest
+
+- name: Put /etc/sysconfig/docker file.
+  copy: src=etcd.conf dest=/etc/etcd/etcd.conf
+
+- name: Enable and Start etcd service
+  service: name=etcd state=restarted enabled=yes

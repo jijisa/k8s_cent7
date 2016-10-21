@@ -1,0 +1,8 @@
+---
+- name: Install flannel overlay network package
+  yum: name=flannel state=latest
+- name: Configure flannel
+  template: src=flanneld.j2 dest=/etc/sysconfig/flanneld
+- name: Enable and start flanneld
+  service: name=flanneld state=restarted enabled=yes
+...

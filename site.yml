@@ -1,0 +1,45 @@
+---
+# This playbook deploys kubernetes stack on centos 7.
+
+- name: Apply common configuration to all nodes
+  hosts: all
+  remote_user: root
+
+  roles:
+    - common
+
+- name: Install and configure etcd KVS on a master
+  hosts: master
+  remote_user: root
+
+  roles:
+    - etcd
+
+- name: Install and configure kubernetes master
+  hosts: master
+  remote_user: root
+
+  roles:
+    - master
+
+- name: Install and configure flannel overlay network on all minions
+  hosts: minion
+  remote_user: root
+
+  roles:
+    - flannel
+
+- name: Install and configure docker container engine
+  hosts: all
+  remote_user: root
+
+  roles:
+    - docker
+
+- name: Install and configure kubernetes minion
+  hosts: minion
+  remote_user: root
+
+  roles:
+    - minion
+...
