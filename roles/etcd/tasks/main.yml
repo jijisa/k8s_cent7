@@ -2,8 +2,15 @@
 - name: Install etcd cluster KVS package
   yum: name=etcd state=latest
 
-- name: Put /etc/sysconfig/docker file.
-  copy: src=etcd.conf dest=/etc/etcd/etcd.conf
+- name: Put /etc/etcd/etcd.conf file.
+  template: src=etcd.conf.j2 dest=/etc/etcd/etcd.conf
 
 - name: Enable and Start etcd service
   service: name=etcd state=restarted enabled=yes
+
+- name: Copy flannel overlay network config.
+  copy: src=flannel-config.json dest=/tmp/flannel-config.json
+
+- name: Add flannel overlay network config to etcd datastore.
+  shell: etcdctl --endpoints http://{{ etcd_ip }}:{{ etcd_port }} set /ucim/network/config < /tmp/flannel-config.json
+...

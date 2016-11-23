@@ -5,7 +5,10 @@
     - master
     - client
 
-- name: Configure kubelet
+- name: Configure /etc/kubernetes/config
+  template: src=config.j2 dest=/etc/kubernetes/config
+
+- name: Configure /etc/kubernetes/apiserver
   template: src=apiserver.j2 dest=/etc/kubernetes/apiserver
 
 - name: Create systemd drop-in dir for kube-{scheduler,controller-manager}
@@ -38,7 +41,19 @@
   file: path=/var/run/kubernetes state=directory 
           mode=0755 owner=kube group=kube
 
-- name: Enable and start master three musketeers
+- name: Set up the operator user 'ucim' other than root
+  user: name=ucim comment="UCIM user" groups=wheel append=yes
+      password={{ ucim_password }}
+
+- name: Add aliases into ucim's .bashrc
+  blockinfile:
+    dest: /home/ucim/.bashrc
+    block: |
+      alias {{ item.name }}='{{ item.value }}'
+    marker: "# {mark} K8S MASTER ALIAS BLOCK {{ item.value }}"
+  with_items: "{{ bash_aliases }}"
+
+- name: Enable and start three musketeers
   service: name={{ item }} state=restarted enabled=yes
   with_items: "{{ master_three_musketeers }}"
 ...

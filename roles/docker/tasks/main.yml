@@ -25,6 +25,34 @@
 #  lineinfile: dest=/etc/sysconfig/docker regexp='^OPTIONS=' 
 #      line="OPTIONS='--selinux-enabled --log-driver=journald -G dockerroot'"
 
+- name: Check for {{ docker_devs }}
+  command: parted -s {{ docker_devs }} print {{ docker_devs_partno }}
+  register: docker_lvm
+  failed_when: docker_lvm.rc is not defined
+  changed_when: >
+    docker_lvm.stdout == "Error: partition does not exists."
+
+- name: Get the free space for {{ docker_devs }}
+  shell: "parted -m {{ docker_devs }} unit s print free|grep 'free;' |tail -1 |cut -f2 -d':'"
+  register: mkpart_start
+
+- name: Create {{ docker_devs }}{{ docker_devs_partno }}
+  command: parted -s {{ docker_devs }} mkpart primary {{ mkpart_start.stdout }} 100%
+  when: docker_lvm.rc != 0
+
+- name: Add LVM flag to {{ docker_devs}}{{ docker_devs_partno }}
+  command: parted -s {{ docker_devs}} set {{ docker_devs_partno }} lvm on
+  when: docker_lvm.rc != 0
+
+- name: Create VG docker with PV {{ docker_devs }}{{ docker_devs_partno }}
+  lvg: vg=docker pvs={{ docker_devs }}{{docker_devs_partno }}
+
+- name: Put /etc/sysconfig/docker-storage-setup file.
+  template: src=docker-storage-setup.j2 dest=/etc/sysconfig/docker-storage-setup
+
+- name: Run docker-storage-setup
+  command: docker-storage-setup
+
 - name: Enable and Start docker
   service: name=docker state=restarted enabled=yes
 
@@ -32,32 +60,8 @@
   user: name=ucim comment="UCIM user" groups=wheel,dockerroot append=yes
       password={{ ucim_password }}
 
-- name: Add aliases into ucim's .bashrc
-  blockinfile:
-    dest: /home/ucim/.bashrc
-    block: |
-      alias {{ item.name }}='{{ item.value }}'
-    marker: "# {mark} K8S MASTER ALIAS BLOCK {{ item.value }}"
-  with_items:
-      - { name: e, value: etcdctl }
-      - { name: uc, value: kubectl }
-      - { name: watch, value: 'watch ' }
-
-- name: Create a directory for registry volume.
-  file: path=/srv/docker/images state=directory mode=0755
-
 - name: Install docker-py module.
   shell: /usr/bin/pip install docker-py
-
-- name: Run a private docker registry - D'Artagnan
-  docker_container:
-    name: dartagnan
-    state: started
-    image: registry:2
-    ports:
-      - "5000:5000"
-    volumes:
-      - /srv/docker/images:/var/lib/registry:rw
 
 #- name: Inline-Edit sudoers of wheel group.
 #  lineinfile: "dest=/etc/sudoers state=present regexp='^%wheel' line='%wheel ALL=(ALL) NOPASSWD: ALL'"
